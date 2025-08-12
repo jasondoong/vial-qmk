@@ -44,7 +44,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define USE_SERIAL_PD2
 
 #define TAPPING_FORCE_HOLD
-#define TAPPING_TERM 200
+#define TAPPING_TERM 100
 
 // Tap/hold feel (tweak to taste)
 #define PERMISSIVE_HOLD
@@ -56,4 +56,4 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // OLED (if enabled)
 #define SPLIT_OLED_ENABLE         // Lily58 has 2 halves
-
+#define SPLIT_WPM_ENABLE

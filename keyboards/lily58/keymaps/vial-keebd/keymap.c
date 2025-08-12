@@ -137,11 +137,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   )
 };
 
-#ifdef OLED_ENABLE
-
 oled_rotation_t oled_init_user(oled_rotation_t rotation) {
-  // if (!is_keyboard_master())
-  //   return OLED_ROTATION_180;  // flips the display 180 degrees if offhand
+  if (!is_keyboard_master())
+    return OLED_ROTATION_180;  // flips the display 180 degrees if offhand
   return rotation;
 }
 
@@ -149,6 +147,44 @@ layer_state_t layer_state_set_user(layer_state_t state) {
     state = update_tri_layer_state(state, _RAISE, _LOWER, _ADJUST);
     return state;
 }
+
+//
+// Render left OLED display
+//
+static void render_status(void) {
+
+    // WPM
+    oled_write_P(PSTR("      "), false);
+    sprintf(wpm_str, "%03d", get_current_wpm());
+    oled_write(wpm_str, false);
+    oled_write_P(PSTR("   WPM"), false);
+
+    // GUI keys indicator
+    if (gui_on) oled_write_P(PSTR("\n       "), false);
+    else oled_write_P(PSTR("\n      GUI   OFF"), false);
+
+    // Caps lock indicator
+    led_t led_state = host_keyboard_led_state();
+    oled_write_P(led_state.caps_lock ? PSTR("\n      CAPS LOCK") : PSTR("\n       "), false);
+
+    // Layer indicator
+    oled_write_P(PSTR("\n      LAYER "), false);
+
+    switch (get_highest_layer(layer_state)) {
+        case 2:
+	    oled_write_P(PSTR("RAISE"), false);
+	    break;
+	    // Layer 1
+        case 1:
+            oled_write_P(PSTR("LOWER"), false);
+            break;
+        // Layer 0
+        default:
+            oled_write_P(PSTR("BASE "), false);
+            break;
+    }
+}
+
 // static void render_logo(void) {
 //     static const char PROGMEM logo[] = {
 //         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,128,64,64,32,32,32,32,16,16,16,16,16,8,8,4,4,4,8,48,64,128,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,128,128,128,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,24,100,130,2,2,2,2,2,1,0,0,0,0,128,128,0,0,0,0,0,0,0,0,0,128,0,48,48,0,192,193,193,194,4,8,16,32,64,128,0,0,0,128,128,128,128,64,64,
@@ -266,88 +302,13 @@ static void render_anim(void) {
     }
 }
 
-char keylog_str[24] = {};
-char keylogs_str[21] = {};
-int keylogs_str_idx = 0;
-
-const char code_to_name[60] = {
-    ' ', ' ', ' ', ' ', 'a', 'b', 'c', 'd', 'e', 'f',
-    'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
-    'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-    '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
-    'R', 'E', 'B', 'T', '_', '-', '=', '[', ']', '\\',
-    '#', ';', '\'', '`', ',', '.', '/', ' ', ' ', ' '};
-
-void set_keylog(uint16_t keycode, keyrecord_t *record) {
-  char name = ' ';
-  if (keycode < 60) {
-    name = code_to_name[keycode];
-  }
-
-  // update keylog
-  snprintf(keylog_str, sizeof(keylog_str), "%dx%d, k%2d : %c",
-           record->event.key.row, record->event.key.col,
-           keycode, name);
-
-  // update keylogs
-  if (keylogs_str_idx == sizeof(keylogs_str) - 1) {
-    keylogs_str_idx = 0;
-    for (int i = 0; i < sizeof(keylogs_str) - 1; i++) {
-      keylogs_str[i] = ' ';
-    }
-  }
-
-  keylogs_str[keylogs_str_idx] = name;
-  keylogs_str_idx++;
-}
-
-const char *read_keylog(void) {
-  return keylog_str;
-}
-
-const char *read_keylogs(void) {
-  return keylogs_str;
-}
-//new
-
 bool oled_task_user(void) {
   if (is_keyboard_master()) {
-    // Host Keyboard Layer Status
-    oled_write_P(PSTR("Layer: "), false);
-
-    switch (get_highest_layer(layer_state)) {
-    case _QWERTY:
-        oled_write_ln_P(PSTR("Default"), false);
-        break;
-    case _RAISE:
-        oled_write_ln_P(PSTR("Raise"), false);
-        break;
-    case _LOWER:
-        oled_write_ln_P(PSTR("Lower"), false);
-        break;
-    case _ADJUST:
-        oled_write_ln_P(PSTR("Adjust"), false);
-        break;
-    default:
-        oled_write_ln_P(PSTR("Undefined"), false);
-    }
-
-    oled_write_ln(read_keylog(), false);
-    oled_write_ln(read_keylogs(), false);
+    render_status();
 
   } else {
     render_anim();
   }
     return false;
 }
-#endif // OLED_ENABLE
 
-
-bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-  if (record->event.pressed) {
-#ifdef OLED_ENABLE
-    set_keylog(keycode, record);
-#endif
-  }
-  return true;
-}
